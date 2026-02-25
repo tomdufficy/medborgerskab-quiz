@@ -5,14 +5,23 @@ async function loadQuestions() {
   const text = await res.text();
 
   const lines = text.trim().split(/\r?\n/);
-  const headers = lines[0].split(",").map(h => h.replace(/^\uFEFF/, "").trim());
+
+  // Detect delimiter automatically
+  const delimiter = lines[0].includes(";") ? ";" : ",";
+
+  const headers = lines[0]
+    .split(delimiter)
+    .map(h => h.replace(/^\uFEFF/, "").trim());
 
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
+    const cols = lines[i].split(delimiter);
     if (cols.length < headers.length) continue;
 
     let obj = {};
-    headers.forEach((h, j) => obj[h] = cols[j].trim());
+    headers.forEach((h, j) => {
+      obj[h] = (cols[j] || "").trim();
+    });
+
     if (!obj.correct_answer) continue;
 
     QUESTIONS.push(obj);

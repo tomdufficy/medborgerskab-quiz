@@ -18,7 +18,7 @@ h1 {
   margin: 30px 0 10px 0;
 }
 
-/* FIXED CARD SIZE */
+/* Card */
 #app {
   max-width: 700px;
   margin: 0 auto 50px auto;
@@ -27,41 +27,34 @@ h1 {
   border-radius: 14px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 
-  height: 620px;               /* fixed height */
+  height: 620px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;   /* FIX */
 }
 
-/* WRAPPER */
+/* Layout */
 #quiz-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* QUESTION AREA */
 #question-box {
   flex: 1;
-  overflow-y: auto;            /* scroll inside */
+  overflow-y: auto;
 }
 
-/* OPTIONS */
-#options {
-  margin-top: 15px;
-}
-
-/* FEEDBACK */
 #feedback {
   margin-top: 20px;
   min-height: 60px;
 }
 
-/* FOOTER */
 #quiz-footer {
   margin-top: 20px;
 }
 
-/* BUTTONS */
+/* Buttons */
 button {
   display: block;
   width: 100%;
@@ -74,6 +67,7 @@ button {
   color: white;
   cursor: pointer;
   transition: 0.2s ease;
+  box-sizing: border-box;   /* FIX */
 }
 
 button:hover {

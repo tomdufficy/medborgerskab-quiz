@@ -1,17 +1,28 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Medborgerskabsprøven – Quiz</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Medborgerskabsprøven – Quiz</title>
+
+<style>
+body { font-family: monospace; max-width: 900px; margin: 30px auto; padding: 0 20px; }
+button { padding: 8px 12px; margin: 5px 0; cursor: pointer; }
+.correct { color: green; font-weight: bold; }
+.wrong { color: crimson; font-weight: bold; }
+.cyan { color: teal; }
+.flag-red { color: red; }
+.flag-white { color: #ddd; }
+.review-block { border-top: 1px solid #ccc; margin-top: 15px; padding-top: 10px; }
+</style>
 </head>
+
 <body>
-  <h1>Medborgerskabsprøven – Quiz</h1>
 
-  <div id="app">
-    Indlæser...
-  </div>
+<h1>Medborgerskabsprøven – Quiz</h1>
 
-  <script src="app.js"></script>
+<div id="app">Indlæser...</div>
+
+<script src="app.js"></script>
 </body>
 </html>

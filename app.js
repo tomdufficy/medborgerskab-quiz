@@ -232,6 +232,8 @@ function endDueToTimeout() {
 /* ---------------- RESULTS ---------------- */
 
 function showResults(timedOut = false) {
+  document.getElementById("app").classList.remove("quiz-active");
+  
   clearTimer();
 
   const correctCount = RESULTS.filter(r => r.ok).length;

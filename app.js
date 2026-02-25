@@ -40,6 +40,8 @@ async function loadQuestions() {
 /* ---------------- START SCREEN ---------------- */
 
 function showStart() {
+  document.getElementById("app").classList.remove("quiz-active");
+  
   clearTimer();
 
   document.getElementById("app").innerHTML = `

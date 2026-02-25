@@ -6,12 +6,11 @@ async function loadQuestions() {
 
   const lines = text.trim().split(/\r?\n/);
 
-  // Detect delimiter automatically
   const delimiter = lines[0].includes(";") ? ";" : ",";
 
   const headers = lines[0]
     .split(delimiter)
-    .map(h => h.replace(/^\uFEFF/, "").trim());
+    .map(h => h.replace(/\uFEFF/g, "").trim());
 
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(delimiter);

@@ -124,22 +124,32 @@ function showQuestion() {
     <p>Sæson: ${q.season} | År: ${q.year} | Nr: ${q.question_number}</p>
     <hr>
     <p>${q.question_text}</p>
-    <div id="options">
+    <form id="answerForm">
   `;
 
   ["A","B","C"].forEach(letter => {
     const txt = q["option_" + letter];
     if (!txt) return;
 
-    if (MODE === "C" && letter === correct) {
-      html += `<button onclick="answer('${letter}')">${letter}: ${txt} ← KORREKT</button><br>`;
-    } else {
-      html += `<button onclick="answer('${letter}')">${letter}: ${txt}</button><br>`;
-    }
+    const markCorrect =
+      MODE === "C" && letter === correct
+        ? " <strong>(Korrekt svar)</strong>"
+        : "";
+
+    html += `
+      <div>
+        <label>
+          <input type="radio" name="answer" value="${letter}">
+          ${letter}: ${txt}${markCorrect}
+        </label>
+      </div>
+    `;
   });
 
   html += `
-    </div>
+      <br>
+      <button type="button" onclick="submitAnswer()">Bekræft svar</button>
+    </form>
     <div id="feedback" style="margin-top:15px;"></div>
     <br>
     <button onclick="showStart()">Nulstil prøve</button>
@@ -149,7 +159,14 @@ function showQuestion() {
   if (MODE === "A") updateTimerDisplay();
 }
 
-function answer(letter) {
+function submitAnswer() {
+  const selected = document.querySelector('input[name="answer"]:checked');
+  if (!selected) {
+    alert("Vælg et svar før du fortsætter.");
+    return;
+  }
+
+  const letter = selected.value;
   const q = QUIZ[INDEX];
   const correct = q.correct_answer.trim().toUpperCase();
   const ok = letter === correct;
@@ -160,17 +177,16 @@ function answer(letter) {
     const fb = document.getElementById("feedback");
 
     if (ok) {
-      fb.innerHTML = `<p style="color:green; font-weight:bold;">KORREKT!</p>`;
+      fb.innerHTML =
+        `<p style="color:green; font-weight:bold;">KORREKT!</p>`;
     } else {
-      fb.innerHTML = `
-        <p style="color:crimson; font-weight:bold;">
+      fb.innerHTML =
+        `<p style="color:crimson; font-weight:bold;">
           FORKERT – korrekt svar er ${correct}: ${q["option_" + correct]}
         </p>`;
     }
 
     fb.innerHTML += `<button onclick="nextQuestion()">Næste spørgsmål</button>`;
-
-    document.getElementById("options").innerHTML = "";
   } else {
     nextQuestion();
   }

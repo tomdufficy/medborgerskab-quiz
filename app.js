@@ -108,6 +108,8 @@ function updateTimerDisplay() {
 /* ---------------- QUIZ ---------------- */
 
 function startQuiz(mode) {
+  document.getElementById("app").classList.add("quiz-active");
+  
   MODE = mode;
   QUIZ = [...QUESTIONS].sort(() => 0.5 - Math.random()).slice(0, NUM_QUESTIONS);
   RESULTS = [];

@@ -119,12 +119,17 @@ function showQuestion() {
   const correct = q.correct_answer.trim().toUpperCase();
 
   let html = `
-    ${MODE === "A" ? `<div id="timer"></div>` : ""}
-    <p><strong>Spørgsmål ${INDEX + 1} af ${QUIZ.length}</strong></p>
-    <p>Sæson: ${q.season} | År: ${q.year} | Nr: ${q.question_number}</p>
-    <hr>
-    <p>${q.question_text}</p>
-    <div id="options">
+    <div id="quiz-wrapper">
+
+      <div id="question-box">
+        ${MODE === "A" ? `<div id="timer"></div>` : ""}
+
+        <p><strong>Spørgsmål ${INDEX + 1} af ${QUIZ.length}</strong></p>
+        <p>Sæson: ${q.season} | År: ${q.year} | Nr: ${q.question_number}</p>
+        <hr>
+        <p>${q.question_text}</p>
+
+        <div id="options">
   `;
 
   ["A","B","C"].forEach(letter => {
@@ -139,13 +144,19 @@ function showQuestion() {
   });
 
   html += `
+        </div>
+        <div id="feedback"></div>
+      </div>
+
+      <div id="quiz-footer">
+        <button class="secondary" onclick="showStart()">Nulstil prøve</button>
+      </div>
+
     </div>
-    <div id="feedback" style="margin-top:15px;"></div>
-    <br>
-    <button onclick="showStart()">Nulstil prøve</button>
   `;
 
   document.getElementById("app").innerHTML = html;
+
   if (MODE === "A") updateTimerDisplay();
 }
 

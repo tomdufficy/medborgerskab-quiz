@@ -3,8 +3,9 @@ let QUIZ = [];
 let RESULTS = [];
 let MODE = "A";
 let INDEX = 0;
+
 let TIMER_INTERVAL = null;
-let TIME_LEFT = 1800;
+let TIME_LEFT = 1800; // 30 minutes in seconds
 
 const NUM_QUESTIONS = 25;
 const PASS_MARK = 20;
@@ -14,6 +15,7 @@ const PASS_MARK = 20;
 async function loadQuestions() {
   const res = await fetch("questions.csv");
   const text = await res.text();
+
   const lines = text.trim().split(/\r?\n/);
   const delimiter = lines[0].includes(";") ? ";" : ",";
 
@@ -25,10 +27,10 @@ async function loadQuestions() {
     const cols = lines[i].split(delimiter);
     if (cols.length < headers.length) continue;
 
-    let obj = {};
+    const obj = {};
     headers.forEach((h, j) => obj[h] = (cols[j] || "").trim());
-    if (!obj.correct_answer) continue;
 
+    if (!obj.correct_answer) continue;
     QUESTIONS.push(obj);
   }
 
@@ -45,25 +47,27 @@ function showStart() {
 
     <h3>Om prøven:</h3>
     <ul>
-      <li>Den officielle prøve består af 25 spørgsmål.</li>
-      <li>Du skal have mindst 20 rigtige for at bestå.</li>
+      <li>Den officielle medborgerskabsprøve består af 25 skriftlige spørgsmål om det danske folkestyre, hverdagsliv samt dansk kultur og historie.</li>
+      <li>Hvert spørgsmål har 2 eller 3 svarmuligheder.</li>
       <li>Prøven varer 30 minutter.</li>
+      <li>Du skal have mindst 20 rigtige svar for at bestå.</li>
+      <li>Bestået prøve kan opfylde kravet om medborgerskab ved ansøgning om permanent opholdstilladelse.</li>
     </ul>
 
-    <p><em>Denne øveprøve bruger udelukkende tidligere spørgsmål. 
+    <p><em>Bemærk: Denne øveprøve indeholder udelukkende spørgsmål fra tidligere afholdte prøver.
     Der udvælges 25 tilfældige spørgsmål ved hver gennemførsel.</em></p>
 
     <h3>Vælg tilstand:</h3>
 
     <button onclick="startQuiz('A')">
       A – Standard (tidsbegrænset)<br>
-      <small>Resultatet vises først til sidst. 30 minutters tidsbegrænsning.</small>
-    </button><br><br>
+      <small>Resultatet vises først, når alle spørgsmål er besvaret. Prøven er tidsbegrænset til 30 minutter.</small>
+    </button><br>
 
     <button onclick="startQuiz('B')">
       B – Studie<br>
-      <small>Du får straks at vide, om dit svar er rigtigt eller forkert.</small>
-    </button><br><br>
+      <small>Du får at vide efter hvert spørgsmål, om dit svar er rigtigt eller forkert.</small>
+    </button><br>
 
     <button onclick="startQuiz('C')">
       C – Bug Testing<br>
@@ -98,8 +102,7 @@ function updateTimerDisplay() {
   const minutes = Math.floor(TIME_LEFT / 60);
   const seconds = TIME_LEFT % 60;
   const el = document.getElementById("timer");
-  if (el) el.innerText =
-    `Tid tilbage: ${minutes}:${seconds.toString().padStart(2,'0')}`;
+  if (el) el.innerText = `Tid tilbage: ${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 /* ---------------- QUIZ ---------------- */
@@ -120,7 +123,6 @@ function showQuestion() {
 
   let html = `
     <div id="quiz-wrapper">
-
       <div id="question-box">
         ${MODE === "A" ? `<div id="timer"></div>` : ""}
 
@@ -132,31 +134,32 @@ function showQuestion() {
         <div id="options">
   `;
 
-  ["A","B","C"].forEach(letter => {
+  ["A", "B", "C"].forEach(letter => {
     const txt = q["option_" + letter];
     if (!txt) return;
 
-    if (MODE === "C" && letter === correct) {
-      html += `<button onclick="answer('${letter}')">${letter}: ${txt} ← KORREKT</button><br>`;
-    } else {
-      html += `<button onclick="answer('${letter}')">${letter}: ${txt}</button><br>`;
-    }
+    // No "A/B/C:" prefix in button text.
+    // In Bug Testing mode, mark correct answer subtly with a check.
+    const suffix = (MODE === "C" && letter === correct) ? " ✓" : "";
+
+    html += `
+      <button id="opt-${letter}" onclick="answer('${letter}')">${escapeHtml(txt)}${suffix}</button>
+    `;
   });
 
   html += `
         </div>
-        <div id="feedback"></div>
+
+        <div id="feedback" style="margin-top:20px; min-height:60px;"></div>
       </div>
 
       <div id="quiz-footer">
         <button class="secondary" onclick="showStart()">Nulstil prøve</button>
       </div>
-
     </div>
   `;
 
   document.getElementById("app").innerHTML = html;
-
   if (MODE === "A") updateTimerDisplay();
 }
 
@@ -167,24 +170,43 @@ function answer(letter) {
 
   RESULTS.push({ q, letter, correct, ok });
 
-  if (MODE === "B" || MODE === "C") {
-    const fb = document.getElementById("feedback");
-
-    if (ok) {
-      fb.innerHTML = `<p style="color:green; font-weight:bold;">KORREKT!</p>`;
-    } else {
-      fb.innerHTML = `
-        <p style="color:crimson; font-weight:bold;">
-          FORKERT – korrekt svar er ${correct}: ${q["option_" + correct]}
-        </p>`;
-    }
-
-    fb.innerHTML += `<button onclick="nextQuestion()">Næste spørgsmål</button>`;
-
-    document.getElementById("options").innerHTML = "";
-  } else {
+  // Mode A = no feedback during quiz: move on immediately
+  if (MODE === "A") {
     nextQuestion();
+    return;
   }
+
+  // Modes B/C: reveal colors, keep options visible, then allow "Next"
+  revealCorrectness(correct);
+
+  const fb = document.getElementById("feedback");
+  if (ok) {
+    fb.innerHTML = `<div style="color:green; font-weight:bold;">KORREKT!</div>
+                    <button onclick="nextQuestion()">Næste spørgsmål</button>`;
+  } else {
+    const correctText = q["option_" + correct] || "";
+    fb.innerHTML = `<div style="color:crimson; font-weight:bold;">
+                      FORKERT – korrekt svar er ${escapeHtml(correctText)}
+                    </div>
+                    <button onclick="nextQuestion()">Næste spørgsmål</button>`;
+  }
+}
+
+function revealCorrectness(correctLetter) {
+  ["A", "B", "C"].forEach(letter => {
+    const btn = document.getElementById(`opt-${letter}`);
+    if (!btn) return;
+
+    // Disable further clicks without changing to grey "disabled" styling
+    btn.onclick = null;
+    btn.style.cursor = "default";
+
+    if (letter === correctLetter) {
+      btn.style.background = "#16a34a"; // green
+    } else {
+      btn.style.background = "#dc2626"; // red
+    }
+  });
 }
 
 function nextQuestion() {
@@ -199,19 +221,20 @@ function nextQuestion() {
 /* ---------------- TIMEOUT ---------------- */
 
 function endDueToTimeout() {
-  document.getElementById("app").innerHTML +=
-    `<p style="color:crimson; font-weight:bold;">Tiden er udløbet.</p>`;
-  showResults();
+  // End immediately in Standard mode when time runs out
+  showResults(true);
 }
 
 /* ---------------- RESULTS ---------------- */
 
-function showResults() {
+function showResults(timedOut = false) {
   clearTimer();
+
   const correctCount = RESULTS.filter(r => r.ok).length;
 
   let html = `
     <h2>Resultat</h2>
+    ${timedOut ? `<p style="color:crimson; font-weight:bold;">Tiden er udløbet.</p>` : ""}
     <p>Du fik ${correctCount} ud af ${QUIZ.length} rigtige.</p>
   `;
 
@@ -224,12 +247,15 @@ function showResults() {
   html += `<h3>Detaljeret oversigt</h3>`;
 
   RESULTS.forEach((r, i) => {
+    const userText = r.q["option_" + r.letter] || "";
+    const correctText = r.q["option_" + r.correct] || "";
+
     html += `
       <div style="border-top:1px solid #ccc; margin-top:10px; padding-top:10px;">
-        <p><strong>Spørgsmål ${i+1}</strong> (${r.q.season} ${r.q.year}, nr. ${r.q.question_number})</p>
-        <p>${r.q.question_text}</p>
-        <p>Dit svar: ${r.letter}: ${r.q["option_" + r.letter] || ""}</p>
-        <p>Rigtigt svar: ${r.correct}: ${r.q["option_" + r.correct]}</p>
+        <p><strong>Spørgsmål ${i + 1}</strong> (${r.q.season} ${r.q.year}, nr. ${r.q.question_number})</p>
+        <p>${escapeHtml(r.q.question_text || "")}</p>
+        <p>Dit svar: ${escapeHtml(userText)}</p>
+        <p>Rigtigt svar: ${escapeHtml(correctText)}</p>
         <p style="color:${r.ok ? "green" : "crimson"}; font-weight:bold;">
           ${r.ok ? "KORREKT" : "FORKERT"}
         </p>
@@ -261,9 +287,9 @@ function renderFlag() {
 
   let html = `<pre>`;
   lines.forEach(line => {
-    for (let char of line) {
-      if (char === "#") html += `<span style="color:red">#</span>`;
-      else html += `<span style="color:#ddd">${char}</span>`;
+    for (const ch of line) {
+      if (ch === "#") html += `<span style="color:red">#</span>`;
+      else html += `<span style="color:#ddd">${escapeHtml(ch)}</span>`;
     }
     html += "\n";
   });
@@ -280,6 +306,17 @@ function renderSadCat() {
 </pre>
 <p style="color:crimson; font-weight:bold;">Du bestod ikke denne gang – prøv igen! 😿</p>
 `;
+}
+
+/* ---------------- UTILS ---------------- */
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 loadQuestions();

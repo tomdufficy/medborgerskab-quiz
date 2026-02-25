@@ -37,13 +37,45 @@ async function loadQuestions() {
   showStart();
 }
 
+/* ---------------- TIMER ---------------- */
+
+function startTimer() {
+  TIME_LEFT = 1800;
+  TIMER_INTERVAL = setInterval(() => {
+    TIME_LEFT--;
+    updateTimerDisplay();
+    if (TIME_LEFT <= 0) {
+      clearTimer();
+      endDueToTimeout();
+    }
+  }, 1000);
+}
+
+function clearTimer() {
+  if (TIMER_INTERVAL) {
+    clearInterval(TIMER_INTERVAL);
+    TIMER_INTERVAL = null;
+  }
+}
+
+function updateTimerDisplay() {
+  const minutes = Math.floor(TIME_LEFT / 60);
+  const seconds = TIME_LEFT % 60;
+  const el = document.getElementById("timer");
+  if (el) el.innerText = `Tid tilbage: ${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+/* ---------------- RESET ---------------- */
+
+function resetToStart() {
+  clearTimer();
+  document.getElementById("app").classList.remove("quiz-active");
+  showStart();
+}
+
 /* ---------------- START SCREEN ---------------- */
 
 function showStart() {
-  document.getElementById("app").classList.remove("quiz-active");
-  
-  clearTimer();
-
   document.getElementById("app").innerHTML = `
     <p><strong>Der er indlæst ${QUESTIONS.length} spørgsmål fra tidligere prøver.</strong></p>
 
@@ -78,40 +110,11 @@ function showStart() {
   `;
 }
 
-/* ---------------- TIMER ---------------- */
-
-function startTimer() {
-  TIME_LEFT = 1800;
-  TIMER_INTERVAL = setInterval(() => {
-    TIME_LEFT--;
-    updateTimerDisplay();
-
-    if (TIME_LEFT <= 0) {
-      clearTimer();
-      endDueToTimeout();
-    }
-  }, 1000);
-}
-
-function clearTimer() {
-  if (TIMER_INTERVAL) {
-    clearInterval(TIMER_INTERVAL);
-    TIMER_INTERVAL = null;
-  }
-}
-
-function updateTimerDisplay() {
-  const minutes = Math.floor(TIME_LEFT / 60);
-  const seconds = TIME_LEFT % 60;
-  const el = document.getElementById("timer");
-  if (el) el.innerText = `Tid tilbage: ${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
-
 /* ---------------- QUIZ ---------------- */
 
 function startQuiz(mode) {
   document.getElementById("app").classList.add("quiz-active");
-  
+
   MODE = mode;
   QUIZ = [...QUESTIONS].sort(() => 0.5 - Math.random()).slice(0, NUM_QUESTIONS);
   RESULTS = [];
@@ -133,7 +136,7 @@ function showQuestion() {
         <p><strong>Spørgsmål ${INDEX + 1} af ${QUIZ.length}</strong></p>
         <p>Sæson: ${q.season} | År: ${q.year} | Nr: ${q.question_number}</p>
         <hr>
-        <p>${q.question_text}</p>
+        <p>${escapeHtml(q.question_text || "")}</p>
 
         <div id="options">
   `;
@@ -142,23 +145,18 @@ function showQuestion() {
     const txt = q["option_" + letter];
     if (!txt) return;
 
-    // No "A/B/C:" prefix in button text.
-    // In Bug Testing mode, mark correct answer subtly with a check.
     const suffix = (MODE === "C" && letter === correct) ? " ✓" : "";
-
-    html += `
-      <button id="opt-${letter}" onclick="answer('${letter}')">${escapeHtml(txt)}${suffix}</button>
-    `;
+    html += `<button id="opt-${letter}" onclick="answer('${letter}')">${escapeHtml(txt)}${suffix}</button>`;
   });
 
   html += `
         </div>
 
-        <div id="feedback" style="margin-top:20px; min-height:60px;"></div>
+        <div id="feedback"></div>
       </div>
 
       <div id="quiz-footer">
-        <button class="secondary" onclick="showStart()">Nulstil prøve</button>
+        <button class="secondary" onclick="resetToStart()">Nulstil prøve</button>
       </div>
     </div>
   `;
@@ -174,25 +172,29 @@ function answer(letter) {
 
   RESULTS.push({ q, letter, correct, ok });
 
-  // Mode A = no feedback during quiz: move on immediately
+  // Mode A: no feedback during quiz
   if (MODE === "A") {
     nextQuestion();
     return;
   }
 
-  // Modes B/C: reveal colors, keep options visible, then allow "Next"
+  // Mode B/C: reveal colors, keep options visible, allow next
   revealCorrectness(correct);
 
   const fb = document.getElementById("feedback");
   if (ok) {
-    fb.innerHTML = `<div style="color:green; font-weight:bold;">KORREKT!</div>
-                    <button onclick="nextQuestion()">Næste spørgsmål</button>`;
+    fb.innerHTML = `
+      <div style="color:green; font-weight:bold;">KORREKT!</div>
+      <button onclick="nextQuestion()">Næste spørgsmål</button>
+    `;
   } else {
     const correctText = q["option_" + correct] || "";
-    fb.innerHTML = `<div style="color:crimson; font-weight:bold;">
-                      FORKERT – korrekt svar er ${escapeHtml(correctText)}
-                    </div>
-                    <button onclick="nextQuestion()">Næste spørgsmål</button>`;
+    fb.innerHTML = `
+      <div style="color:crimson; font-weight:bold;">
+        FORKERT – korrekt svar er ${escapeHtml(correctText)}
+      </div>
+      <button onclick="nextQuestion()">Næste spørgsmål</button>
+    `;
   }
 }
 
@@ -201,7 +203,6 @@ function revealCorrectness(correctLetter) {
     const btn = document.getElementById(`opt-${letter}`);
     if (!btn) return;
 
-    // Disable further clicks without changing to grey "disabled" styling
     btn.onclick = null;
     btn.style.cursor = "default";
 
@@ -216,7 +217,7 @@ function revealCorrectness(correctLetter) {
 function nextQuestion() {
   INDEX++;
   if (INDEX >= QUIZ.length) {
-    showResults();
+    showResults(false);
   } else {
     showQuestion();
   }
@@ -225,7 +226,6 @@ function nextQuestion() {
 /* ---------------- TIMEOUT ---------------- */
 
 function endDueToTimeout() {
-  // End immediately in Standard mode when time runs out
   showResults(true);
 }
 
@@ -267,7 +267,7 @@ function showResults(timedOut = false) {
     `;
   });
 
-  html += `<br><button onclick="showStart()">Tag en ny prøve</button>`;
+  html += `<br><button onclick="resetToStart()">Tag en ny prøve</button>`;
 
   document.getElementById("app").innerHTML = html;
 }
